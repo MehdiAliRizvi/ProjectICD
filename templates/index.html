@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule-Base</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .rule-section {
+            margin-bottom: 20px;
+        }
+        .rule-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .condition-summary {
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .btn-add {
+            margin-top: 10px;
+        }
+        .btn-remove {
+            margin-top: 10px;
+            margin-left: 10px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+
+<script>
+    function addDiseaseCode() {
+        const container = document.getElementById('disease-codes-container');
+        const div = document.createElement('div');
+        div.className = 'disease-code-entry mb-2';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'disease_code';
+        input.className = 'form-control mb-2';
+        input.placeholder = 'Add Code';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-danger';
+        button.innerText = 'Remove This Code';
+        button.onclick = function() {
+            container.removeChild(div);
+            toggleRemoveButtons();
+        };
+
+        div.appendChild(input);
+        div.appendChild(button);
+        container.appendChild(div);
+
+        toggleRemoveButtons();
+    }
+
+    function toggleRemoveButtons() {
+        const entries = document.querySelectorAll('.disease-code-entry');
+        entries.forEach((entry, index) => {
+            const button = entry.querySelector('button');
+            button.style.display = entries.length > 1 ? 'inline-block' : 'none';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleRemoveButtons();
+    });
+</script>
+<script>
+    function addCondition() {
+        const container = document.getElementById('conditions-container');
+        const div = document.createElement('div');
+        div.className = 'condition-entry mb-2';
+
+        // Add your condition input fields here
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'condition';
+        input.className = 'form-control mb-2';
+        input.placeholder = 'Add Condition';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-danger';
+        button.innerText = 'Remove This Condition';
+        button.onclick = function() {
+            container.removeChild(div);
+            toggleRemoveButtons();
+        };
+
+        div.appendChild(input);
+        div.appendChild(button);
+        container.appendChild(div);
+
+        toggleRemoveButtons();
+    }
+
+    function toggleRemoveButtons() {
+        const entries = document.querySelectorAll('.condition-entry');
+        entries.forEach((entry, index) => {
+            const button = entry.querySelector('button');
+            button.style.display = entries.length > 1 ? 'inline-block' : 'none';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleRemoveButtons();
+    });
+</script>
+
+
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="/">Rule-Base</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/lab_values">Lab Values Input</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin_parameters">Admin Parameters</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1 class="text-center">RULE-BASE</h1>
+        <form action="{{ url_for('submit') }}" method="POST">
+            <div id="rules-container">
+                <div class="rule-section">
+                    <div class="rule-header">Rule 1</div>
+                    <div class="condition-summary" id="condition-summary-1">Condition 1:</div>
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="parameter">Parameter:</label>
+                            <select name="parameter" class="form-control" required>
+                                {% for param in parameters %}
+                                    <option value="{{ param }}">{{ param }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="min_value">Min Value *</label>
+                            <input type="number" step="any" class="form-control min_value" name="min_value" placeholder="Minimum Value" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="max_value">Max Value *</label>
+                            <input type="number" step="any" class="form-control max_value" name="max_value" placeholder="Maximum Value" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="unit">Unit *</label>
+                            <select class="form-control unit" name="unit" required>
+                                <option value="">Choose...</option>
+                                <option value="mg/dL">mg/dL</option>
+                                <option value="mmol/L">mmol/L</option>
+                                <option value="g/L">g/L</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="ageRange">Applicable Age Range *</label>
+                            <input type="number" class="form-control age-range" name="age_range" placeholder="e.g., 0-100" required>
+                            <!-- <input type="number" class="form-control age" name="age" placeholder="Age"> -->
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="gender">Gender</label>
+                            <select class="form-control gender" name="gender" required>
+                                <option value="ALL">ALL</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="validUntil">Parameter Valid Until</label>
+                            <div class="form-row">
+                                <div class="col-md-6">
+                                    <input type="number" class="form-control valid-until-number" name="valid_until_number" placeholder="Number" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <select class="form-control valid-until-unit" name="valid_until_unit" required>
+                                        <option value="Days">Days</option>
+                                        <option value="Months">Months</option>
+                                        <option value="Years">Years</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-primary btn-add">+ Add Another Condition</button>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <button type="button" class="btn btn-danger btn-remove">Remove This Condition</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+            <div id="disease-codes-container">
+                <label for="disease_code">DISEASE CODE:</label>
+                <div class="disease-code-entry mb-2">
+                    <input type="text" name="disease_code" class="form-control mb-2" placeholder="Add Code">
+                    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove(); toggleRemoveButtons();">Remove This Code</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="addDiseaseCode()">+ Add Another Code</button>
+
+            <br> <!-- Adds a line break here -->
+
+            <label for="disease_name">DISEASE NAME:</label>
+            <input type="text" name="disease_name" class="form-control mb-2" placeholder="Add Disease Name">
+
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+
+
+
+
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+$(document).ready(function() {
+    let ruleCount = 1;
+
+    function updateConditionSummary(ruleSection, ruleNumber) {
+        const parameter = ruleSection.find('.parameter').val();
+        const minValue = ruleSection.find('.min_value').val();
+        const maxValue = ruleSection.find('.max_value').val();
+        const unit = ruleSection.find('.unit').val();
+        const ageRange = ruleSection.find('.age-range').val();
+        const gender = ruleSection.find('.gender').val();
+        const validUntilNumber = ruleSection.find('.valid-until-number').val();
+        const validUntilUnit = ruleSection.find('.valid-until-unit').val();
+
+        let conditionText = `Condition ${ruleNumber}: ${parameter} between ${minValue} and ${maxValue} ${unit}, applicable for ${ageRange} age range, ${gender} gender, valid until ${validUntilNumber} ${validUntilUnit}.`;
+
+        ruleSection.find(`#condition-summary-${ruleNumber}`).text(conditionText);
+    }
+    
+        $('#rules-container').on('click', '.btn-add', function() {
+        ruleCount++;
+        let newRuleSection = $('.rule-section').first().clone();
+        newRuleSection.find('input').val('');
+        newRuleSection.find('select').val('');
+        newRuleSection.find('.condition-summary').attr('id', 'condition-summary-' + ruleCount).text('Condition ' + ruleCount + ':');
+        $('#rules-container').append(newRuleSection);
+    });
+
+    $('#rules-container').on('click', '.btn-remove', function() {
+        $(this).closest('.rule-section').remove();
+        updateRuleHeaders();
+    });
+
+    $('#rules-container').on('change', 'input, select', function() {
+        const ruleSection = $(this).closest('.rule-section');
+        const ruleNumber = ruleSection.find('.rule-header').text().split(' ')[1];
+        updateConditionSummary(ruleSection, ruleNumber);
+    });
+
+    $('.btn-submit').click(function() {
+        let isValid = true;
+        $('.error-message').text('');
+        $('input[required], select[required]').each(function() {
+            if ($(this).val() === '' || $(this).val() === 'Choose...') {
+                isValid = false;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            $('.error-message').text('All required fields must be filled out.');
+        } else {
+            $.ajax({
+                type: 'POST',
+                url: '/submit',
+                data: $('#rule-form').serialize(),
+                success: function(response) {
+                    if (response.startsWith('Error:')) {
+                        $('.error-message').text(response);
+                    } else {
+                        $('.error-message').text('Rule submitted successfully.');
+                    }
+                }
+            });
+        }
+    });
+});
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Values Input</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .lab-value-section {
+            margin-bottom: 20px;
+        }
+        .lab-value-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .btn-add {
+            margin-top: 10px;
+        }
+        .btn-remove {
+            margin-top: 10px;
+            margin-left: 10px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="/">Rule-Base</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/lab_values">Lab Values Input</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin_parameters">Admin Parameters</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <h1 class="text-center">Lab Values Input</h1>
+        <form id="lab-values-form" method="POST">
+            <div id="lab-values-container">
+                <div class="lab-value-section">
+                    <div class="lab-value-header">Lab Value 1</div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="parameter">Parameter Name *</label>
+                            <input type="text" class="form-control parameter" name="parameter" placeholder="Parameter" required>
+                        </div>
+                        <!-- <div class="form-group col-md-4">
+                            <label for="min_value">Min Value *</label>
+                            <input type="number" step="any" class="form-control min_value" name="min_value" placeholder="Min Value" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="max_value">Max Value *</label>
+                            <input type="number" step="any" class="form-control max_value" name="max_value" placeholder="Max Value" required>
+                        </div> -->
+                        <div class="form-group col-md-4">
+                            <label for="value">Value *</label>
+                            <input type="number" step="any" class="form-control value" name="value" placeholder="Value" required>
+                        </div>
+                        
+                        <div class="form-group col-md-3">
+                            <label for="unit">Unit *</label>
+                            <select class="form-control unit" name="unit" required>
+                                <option value="">Choose...</option>
+                                <option value="mg/dL">mg/dL</option>
+                                <option value="mmol/L">mmol/L</option>
+                                <option value="g/L">g/L</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="age">Age of Patient *</label>
+                            <input type="number" class="form-control age" name="age" placeholder="Age" required>
+                            
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="gender">Gender of Patient *</label>
+                            <select class="form-control gender" name="gender" required>
+                                <option value="ALL">ALL</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="lab_taken_on">Lab Values Taken On *</label>
+                            <div class="form-row">
+                                <div class="col-md-6">
+                                    <input type="number" class="form-control lab-taken-on-number" name="lab_taken_on_number" placeholder="Number" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <select class="form-control lab-taken-on-unit" name="lab_taken_on_unit" required>
+                                        <option value="Days">Days</option>
+                                        <option value="Months">Months</option>
+                                        <option value="Years">Years</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-primary btn-add">+ Add Another Lab Value</button>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <button type="button" class="btn btn-danger btn-remove">Remove This Lab Value</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-success btn-submit">Submit</button>
+            <div class="error-message error"></div>
+        </form>
+    <!-- Flash message display -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+
+    {% if matching_diseases %}
+    <div class="mt-4">
+        <h3>Matching ICD-10 Codes and Rules:</h3>
+        <ul>
+            {% for disease in matching_diseases %}
+            <li>{{ disease.disease_code }} - Matched Rules:
+                <ul>
+                    {% for rule in disease.matched_rules %}
+                    <li>Parameter: {{ rule.parameter }}, Min: {{ rule.min_value }}, Max: {{ rule.max_value }}, Unit: {{ rule.unit }}, Age Range: {{ rule.age_range }}, Gender: {{ rule.gender }}</li>
+                    {% endfor %}
+                </ul>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% elif message %}
+    <div class="alert alert-info mt-4">{{ message }}</div>
+    {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let labValueCount = 1;
+
+            // Use event delegation for adding lab value sections
+            $('#lab-values-container').on('click', '.btn-add', function() {
+                labValueCount++;
+                let newLabValueSection = $('.lab-value-section').first().clone();
+                newLabValueSection.find('input').val('');
+                newLabValueSection.find('select').val('');
+                newLabValueSection.find('.lab-value-header').text('Lab Value ' + labValueCount);
+                $('#lab-values-container').append(newLabValueSection);
+            });
+
+            // Use event delegation for removing lab value sections
+            $('#lab-values-container').on('click', '.btn-remove', function() {
+                $(this).closest('.lab-value-section').remove();
+                updateLabValueHeaders();
+            });
+
+            // Validate and submit the form
+            $('.btn-submit').click(function() {
+                let isValid = true;
+                $('.error-message').text('');
+                $('input[required], select[required]').each(function() {
+                    if ($(this).val() === '') {
+                        isValid = false;
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    $('.error-message').text('All required fields must be filled out.');
+                } else {
+                    $.ajax({
+                        type: 'POST',
+                        url: '/submit_lab_values',
+                        data: $('#lab-values-form').serialize(),
+                        success: function(response) {
+                            if (response.matching_diseases && response.matching_diseases.length > 0) {
+                                let icd10Codes = response.matching_diseases.join(', ');
+                                $('.error-message').text(`Submitted successfully. Matching ICD-10 Codes: ${icd10Codes}`);
+                            } else if (response.message) {
+                                $('.error-message').text(response.message);
+                            } else {
+                                $('.error-message').text("No matching diseases found.");
+                            }
+                        },
+                        error: function() {
+                            $('.error-message').text('An error occurred while submitting the lab values.');
+                        }
+                    });
+
+                }
+            });
+
+            // Update lab value headers to maintain correct numbering
+            function updateLabValueHeaders() {
+                $('#lab-values-container .lab-value-section').each(function(index) {
+                    $(this).find('.lab-value-header').text('Lab Value ' + (index + 1));
+                });
+            }
+        });
+    </script>
+</body>
+</html>
