@@ -43,7 +43,7 @@ class Database:
         self.db = self.client[db_name]
         self.rulebase_collection = self.db[rulebase_collection_name]
         self.user_input_collection = self.db[user_input_collection_name]
-        self.parameters_collection = self.db[parameters_collection_name]
+        self.parameters_collection = self.db[parameters_collection_name]  # Collection for parameters
 
     def insert_disease(self, disease):
         existing_disease = self.rulebase_collection.find_one({'disease_code': disease.disease_code})
@@ -79,6 +79,7 @@ class Database:
                         lab_value_val = float(lab_value['value'])
                         lab_age = int(lab_value['age'])
 
+                        # Handle age range 'ALL'
                         if rule['age_range'] == 'ALL':
                             age_range_matches = True
                         else:
@@ -89,6 +90,7 @@ class Database:
                             else:
                                 age_range_matches = int(age_range_parts[0]) == lab_age
 
+                        # Handle dates and durations
                         try:
                             valid_until_date = datetime.strptime(rule['valid_until'], "%Y-%m-%d")
                             lab_taken_date = datetime.strptime(lab_value['lab_taken_on'], "%Y-%m-%d")
@@ -157,17 +159,22 @@ class Database:
             return f'Error removing parameter: {e}'
 
     def get_all_parameters(self):
+        # Fetch unique parameters from the parameters_list collection
         parameters = self.parameters_collection.distinct('parameter')
         return parameters
 
 app = Flask(__name__)
-app.secret_key = 'random_curemd_secret_key'
+app.secret_key = 'random_curemd_secret_key'  # Required for session management
 
-db = Database('mongodb://172.16.105.132:27017/', 'rulebase', 'RuleBase', 'User_Input_Lab_Values', 'parameters_list')
+# MongoDB connection
+db = Database('mongodb://localhost:27017', 'rulebase', 'RuleBase', 'User_Input_Lab_Values', 'parameters_list')
+
+
 
 @app.route('/')
 def index():
     if 'user' in session:
+        # Fetch parameters from the database
         parameters = db.get_all_parameters()
         return render_template('index.html', parameters=parameters)
     return redirect(url_for('login'))
@@ -177,7 +184,8 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        if email == ("muntazir.mehdi@curemd.com") and password == ("project1"):
+        # Add your authentication logic here
+        if email == ("muntazir.mehdi@curemd.com")and password == ("project1"):  # Use environment variables
             session['user'] = email
             return redirect(url_for('index'))
         else:
@@ -201,36 +209,22 @@ def submit():
     valid_until_units = request.form.getlist('valid_until_unit')
     first_conditions = request.form.getlist('first_condition')
 
+    # Ensure all lists have the same length
     list_lengths = [len(parameters), len(min_values), len(max_values), len(units), len(age_ranges), len(genders), len(valid_until_numbers), len(valid_until_units)]
     if len(set(list_lengths)) != 1:
         return 'Error: Mismatched input lengths!'
 
     rules = []
-    # Adjust rule creation logic in /submit route
     for i in range(len(parameters)):
         valid_until = f"{valid_until_numbers[i]} {valid_until_units[i]}"
-        
-        # Check for value type and create the rule accordingly
-        if request.form.getlist('value_type')[i] == 'single':
-            # Handle single value logic, potentially including the operator
-            min_value = request.form.getlist('single_value')[i]
-            max_value = request.form.getlist('single_value')[i]
-            operator = request.form.getlist('operator')[i]
-            # Use min_value and max_value as same for single values or consider operator in your Rule class if needed
-        else:
-            min_value = min_values[i]
-            max_value = max_values[i]
-        
-        rule = Rule(parameters[i], min_value, max_value, operator, units[i], age_ranges[i], genders[i], valid_until, first_conditions[i] if i < len(first_conditions) else None)
+        rule = Rule(parameters[i], min_values[i], max_values[i], units[i], age_ranges[i], genders[i], valid_until, first_conditions[i] if i < len(first_conditions) else None)
         rules.append(rule)
 
-
-    disease_codes = request.form.getlist('disease_code')
+    disease_codes = request.form.getlist('disease_code')  # Changed to handle multiple disease codes
     disease_name = request.form['disease_name']
-    disease = Disease(disease_codes, disease_name, rules)
-    print(disease.to_dict())  # Debug: Check the structure of the data before insertion
-    result = db.insert_disease(disease)
+    disease = Disease(disease_codes, disease_name, rules)  # Pass the list of disease codes
 
+    result = db.insert_disease(disease)
     return result
 
 @app.route('/lab_values')
@@ -254,7 +248,7 @@ def submit_lab_values():
                 lab_taken_on = f"{lab_taken_on_numbers[i]} {lab_taken_on_units[i]}"
                 lab_values.append({
                     'parameter': parameters[i],
-                    'value': float(values[i]),
+                    'value': float(values[i]),  # Only a single value is provided
                     'unit': units[i],
                     'age': int(ages[i]),
                     'gender': genders[i],
@@ -263,8 +257,9 @@ def submit_lab_values():
             except ValueError as e:
                 return jsonify({'error': f'Invalid input: {e}'}), 400
             
+        # Store lab values in the User_Input_Lab_Values collection
         result = db.insert_lab_values({'lab_values': lab_values})
-        if isinstance(result, str):
+        if isinstance(result, str):  # Return result if it's a string (success or error message)
             return result
 
         matching_diseases = db.find_disease_by_lab_values(lab_values)
