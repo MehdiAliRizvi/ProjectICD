@@ -2,8 +2,9 @@ from flask import Flask, request, render_template, jsonify, redirect, url_for, s
 from pymongo import MongoClient
 
 class Rule:
-    def __init__(self, parameter, min_value, max_value, unit, age_range, gender, valid_until, first_condition=None):
+    def __init__(self, parameter, operator, min_value, max_value, unit, age_range, gender, valid_until, first_condition=None):
         self.parameter = parameter
+        self.operator = operator
         self.min_value = min_value
         self.max_value = max_value
         self.unit = unit
@@ -15,6 +16,7 @@ class Rule:
     def to_dict(self):
         return {
             'parameter': self.parameter,
+            'operator': self.operator,
             'min_value': self.min_value,
             'max_value': self.max_value,
             'unit': self.unit,
@@ -99,9 +101,23 @@ class Database:
                                 days = int(rule['valid_until'].split()[0])
                                 valid_until_date = datetime.now() + timedelta(days=days)
 
+                        # Evaluate based on the operator
+                        if rule['operator'] == '=':
+                            value_matches = lab_value_val == rule_min_value
+                        elif rule['operator'] == '>':
+                            value_matches = lab_value_val > rule_min_value
+                        elif rule['operator'] == '<':
+                            value_matches = lab_value_val < rule_min_value
+                        elif rule['operator'] == '>=':
+                            value_matches = lab_value_val >= rule_min_value
+                        elif rule['operator'] == '<=':
+                            value_matches = lab_value_val <= rule_min_value
+                        else:
+                            value_matches = rule_min_value <= lab_value_val <= rule_max_value  # Default to range comparison
+
                         if (rule['parameter'] == lab_value['parameter'] and
                             rule['unit'] == lab_value['unit'] and
-                            rule_min_value <= lab_value_val <= rule_max_value and
+                            value_matches and
                             age_range_matches and
                             (rule['gender'] == lab_value['gender'] or rule['gender'] == 'ALL') and
                             (valid_until_date is None or lab_taken_date is None or lab_taken_date <= valid_until_date)):
@@ -191,51 +207,64 @@ def logout():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    parameters = request.form.getlist('parameter')
-    min_values = request.form.getlist('min_value')
-    max_values = request.form.getlist('max_value')
-    units = request.form.getlist('unit')
-    age_ranges = request.form.getlist('age_range')
-    genders = request.form.getlist('gender')
-    valid_until_numbers = request.form.getlist('valid_until_number')
-    valid_until_units = request.form.getlist('valid_until_unit')
-    first_conditions = request.form.getlist('first_condition')
+    try:
+        parameters = request.form.getlist('parameter')
+        value_types = request.form.getlist('value_type')
+        operators_single = request.form.getlist('operator_single')
+        operators_range = request.form.getlist('operator_range')
+        min_values = request.form.getlist('min_value')
+        max_values = request.form.getlist('max_value')
+        single_values = request.form.getlist('single_value')
+        units = request.form.getlist('unit')
+        age_ranges = request.form.getlist('age_range')
+        genders = request.form.getlist('gender')
+        valid_until_numbers = request.form.getlist('valid_until_number')
+        valid_until_units = request.form.getlist('valid_until_unit')
+        first_conditions = request.form.getlist('first_condition')
 
-    list_lengths = [len(parameters), len(min_values), len(max_values), len(units), len(age_ranges), len(genders), len(valid_until_numbers), len(valid_until_units)]
-    if len(set(list_lengths)) != 1:
-        return 'Error: Mismatched input lengths!'
+        rules = []
+        for i in range(len(parameters)):
+            value_type = value_types[i]
+            valid_until = f"{valid_until_numbers[i]} {valid_until_units[i]}" if valid_until_numbers[i] and valid_until_units[i] else None
+            first_condition = first_conditions[i] if i < len(first_conditions) and first_conditions[i] else None
 
-    rules = []
-    # Adjust rule creation logic in /submit route
-    for i in range(len(parameters)):
-        valid_until = f"{valid_until_numbers[i]} {valid_until_units[i]}"
-        
-        # Check for value type and create the rule accordingly
-        if request.form.getlist('value_type')[i] == 'single':
-            # Handle single value logic, potentially including the operator
-            min_value = request.form.getlist('single_value')[i]
-            max_value = request.form.getlist('single_value')[i]
-            operator = request.form.getlist('operator')[i]
-            # Use min_value and max_value as same for single values or consider operator in your Rule class if needed
-        else:
-            min_value = min_values[i]
-            max_value = max_values[i]
-        
-        rule = Rule(parameters[i], min_value, max_value, operator, units[i], age_ranges[i], genders[i], valid_until, first_conditions[i] if i < len(first_conditions) else None)
-        rules.append(rule)
+            if value_type == 'single':
+                operator = operators_single[i]
+                value = single_values[i]
+                min_value = max_value = value
+            elif value_type == 'range':
+                operator = operators_range[i]
+                min_value = min_values[i]
+                max_value = max_values[i]
+            else:
+                return 'Error: Invalid value type specified.', 400
 
+            rule = Rule(
+                parameter=parameters[i],
+                operator=operator,
+                min_value=min_value,
+                max_value=max_value,
+                unit=units[i],
+                age_range=age_ranges[i],
+                gender=genders[i],
+                valid_until=valid_until,
+                first_condition=first_condition
+            )
+            rules.append(rule)
 
-    disease_codes = request.form.getlist('disease_code')
-    disease_name = request.form['disease_name']
-    disease = Disease(disease_codes, disease_name, rules)
-    print(disease.to_dict())  # Debug: Check the structure of the data before insertion
-    result = db.insert_disease(disease)
+        disease_code = request.form.get('disease_code')
+        disease_name = request.form.get('disease_name')
 
-    return result
+        if not disease_code or not disease_name:
+            return 'Error: Disease code and name are required.', 400
 
-@app.route('/lab_values')
-def lab_values():
-    return render_template('lab_values.html')
+        disease = Disease(disease_code, disease_name, rules)
+        result = db.insert_disease(disease)
+        return result
+    except Exception as e:
+        print(f"Error in /submit route: {e}")
+        return f'Error processing request: {e}', 500
+
 
 @app.route('/submit_lab_values', methods=['POST'])
 def submit_lab_values():
@@ -245,13 +274,11 @@ def submit_lab_values():
         units = request.form.getlist('unit')
         ages = request.form.getlist('age')
         genders = request.form.getlist('gender')
-        lab_taken_on_numbers = request.form.getlist('lab_taken_on_number')
-        lab_taken_on_units = request.form.getlist('lab_taken_on_unit')
+        lab_taken_on = request.form.get('lab_taken_on')
 
         lab_values = []
         for i in range(len(parameters)):
             try:
-                lab_taken_on = f"{lab_taken_on_numbers[i]} {lab_taken_on_units[i]}"
                 lab_values.append({
                     'parameter': parameters[i],
                     'value': float(values[i]),
